@@ -1,61 +1,33 @@
-import requests
-from bs4 import BeautifulSoup as bs
-import re
+from scraper import *
+import sys
+import argparse
 
-
-# TODO singleton
-class Scraper:
-    def __init__(self, baseurl, filename, rubric=None, date=None):
-        self.baseurl = baseurl
-        self.filename = filename
-        self.rubric = rubric
-        self.date = date
-        self._session = requests.Session()
-        self._rq = requests.get(self.baseurl)
-        self._soup = bs(self._rq.content, "lxml")
-
-    def getPostList(self, posttype):
-        c = "news" if posttype == "news" else "article"
-        newsSpans = self._soup.findAll("div", attrs={"class": c})
-        newsList = []
-        for span in newsSpans:
-            href = span.find("a")["href"]
-            if self.date is None:
-                if re.match("/" + posttype + "/\d{4}/\d{2}/\d{2}/.+/", href):
-                    newsList.append(self.baseurl + href)
-            else:
-                if re.match("/" + posttype + "/" + self.date.replace(".", "/") + "/.+/", href):
-                    newsList.append(self.baseurl + href)
-        return newsList
-
-    def getUrlList(self):
-        if self.rubric is None:
-            return self.getPostList("news") + self.getPostList("articles") + self.getPostList("brief")
-        else:
-            return self.getPostList(self.rubric)
-
-
-class Post:
-    def __init__(self, url):
-        self.url = url
-        self._rq = requests.get(self.url)
-        self._soup = bs(self._rq.content, "lxml")
-        self.headline = None
-        self.subheads = None
-        self.cont = None
-
-    @property
-    def getHeadline(self):
-        return self._soup.find("h1", attrs={"itemprop": "headline"}).text
-
-    @property
-    def content(self):
-        return self._soup.find("div", attrs={"itemprop": "articleBody"}).text
-
+def argManagement():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(help='List of commands')
+    # A list command
+    list_parser = subparsers.add_parser('list', help='List contents')
+    list_parser.add_argument('dirname', action='store', help='Directory to list')
+    # A create command
+    create_parser = subparsers.add_parser('create', help='Create a directory')
+    create_parser.add_argument('dirname', action='store', help='New directory to create')
+    create_parser.add_argument('--read-only', default=False, action='store_true',
+                               help='Set permissions to prevent writing to the directory',
+                               )
 
 def main():
+    usage = f"""\033[1m \033[91m  Usage: python3 main.py --file=path_to_out_file --rubric=type_of_post --date=date  \033[0m 
+    --rubric and --date are optional args"""
+    if len(sys.argv) == 1:
+        print(usage)
+        exit()
+
     scraper = Scraper("https://lenta.ru/", filename="example.txt", rubric="articles")
-    print(Post(scraper.getUrlList()[0]).content)
+    print(scraper.getUrlList()[0])
+    print()
+    print(Post(scraper.getUrlList()[0]).headline())
+    print()
+    print(Post(scraper.getUrlList()[0]).content())
     # with open("./example.txt", "w") as outfile:
     #     for n in scraper.getUrlList():
     #         outfile.write(Post(n).content.text)
