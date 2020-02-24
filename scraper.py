@@ -36,14 +36,12 @@ class Scraper:
             return self.getPostTypeUrlList(self.rubric)
 
     def writeFile(self):
-        i = 0
         with open(self.filename, "w") as outfile:
             for n in self.getUrlList():
-                print(f"{i} -- {n}")
-                i += 1
-                outfile.write(f"{n}\n")
-                outfile.write((Post(n).headline()))
-                outfile.write((Post(n).content()))
+                p = Post(n)
+                outfile.write(f"{p.date()} -- {n}\n")
+                outfile.write((p.headline()))
+                outfile.write((p.content()))
 
 class Post():
     def __init__(self, url):
@@ -53,6 +51,10 @@ class Post():
 
     def headline(self):
         return self._soup.find(class_=re.compile(r"__title")).text +"\n"
+
+    def date(self):
+        return (re.search(r"/\d{4}/\d{2}/\d{2}/", self.url)).group(0)[1:-1].replace("/", ".")
+
 
     def content(self):
         c = ""
