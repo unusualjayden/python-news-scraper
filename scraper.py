@@ -13,8 +13,6 @@ class Scraper:
         self._rq      = requests.get(self.baseurl)
         self._soup    = bs(self._rq.content, "lxml")
 
-    # TODO posttype = all
-
     def getPostTypeUrlList(self, pt):
         c = "news" if pt == "news" else "article"
         spans = self._soup.findAll("div", attrs={"class": c})
@@ -37,6 +35,15 @@ class Scraper:
         else:
             return self.getPostTypeUrlList(self.rubric)
 
+    def writeFile(self):
+        i = 0
+        with open(self.filename, "w") as outfile:
+            for n in self.getUrlList():
+                print(f"{i} -- {n}")
+                i += 1
+                outfile.write(f"{n}\n")
+                outfile.write((Post(n).headline()))
+                outfile.write((Post(n).content()))
 
 class Post():
     def __init__(self, url):
@@ -45,7 +52,13 @@ class Post():
         self._soup    = bs(self._rq.content, "lxml")
 
     def headline(self):
-        return self._soup.find("h1", attrs={"itemprop": "headline"}).text
+        return self._soup.find(class_=re.compile(r"__title")).text +"\n"
 
     def content(self):
-        return self._soup.find("div", attrs={"itemprop": "articleBody"}).text
+        c = ""
+        body = self._soup.find(class_=re.compile(r"(?:js-topic__text|b-numeric-card-box)"))
+        p = body("p")
+        if p is not None:
+            for el in p:
+                c += el.text + "\n"
+        return c
